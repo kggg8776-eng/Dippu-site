@@ -1,14 +1,18 @@
 import { Package, Plus } from 'lucide-react'
 
-export default function EmptyState({ isAdmin, onAdd }) {
+export default function EmptyState({ isAdmin, onAdd, selectedCategory }) {
+  const categoryLabel = selectedCategory && selectedCategory !== 'All'
+    ? `for ${selectedCategory}`
+    : 'in this store'
+
   return (
-    <div className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-gray-200 bg-white py-20 text-center">
+    <div className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-gray-200 bg-white py-16 text-center sm:py-20">
       <div className="rounded-full bg-gray-50 p-4">
         <Package className="h-10 w-10 text-gray-300" />
       </div>
-      <h3 className="mt-4 text-lg font-semibold text-gray-900">No products yet</h3>
+      <h3 className="mt-4 text-lg font-semibold text-gray-900">No products found</h3>
       <p className="mt-1 max-w-xs text-sm text-gray-500">
-        Add products from the Admin page so customers can start ordering on WhatsApp.
+        New stock {categoryLabel} is not available right now. Check back soon!
       </p>
       {isAdmin && (
         <button

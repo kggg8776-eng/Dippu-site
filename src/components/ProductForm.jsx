@@ -4,6 +4,8 @@ import { toDirectImageUrl } from '../utils/driveImage'
 
 const EMPTY_IMAGES = ['', '', '', '']
 
+const CATEGORIES = ['Women', 'Men', 'Child', 'Jewellery', 'Festival']
+
 export default function ProductForm({ onSave, onCancel, product }) {
   const isEditing = Boolean(product)
   const [form, setForm] = useState({
@@ -97,13 +99,18 @@ export default function ProductForm({ onSave, onCancel, product }) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Category</label>
-          <input
+          <label className="block text-sm font-medium text-gray-700">Category *</label>
+          <select
+            required
             value={form.category}
             onChange={(e) => handleChange('category', e.target.value)}
-            placeholder="e.g. Electronics"
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-whatsapp focus:ring-2 focus:ring-whatsapp/20"
-          />
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-whatsapp focus:ring-2 focus:ring-whatsapp/20"
+          >
+            <option value="" disabled>Choose a category</option>
+            {CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
         </div>
       </div>
 
