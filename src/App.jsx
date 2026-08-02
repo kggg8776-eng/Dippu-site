@@ -6,12 +6,12 @@ import OrderModal from './components/OrderModal'
 import ProductModal from './components/HoverPreview'
 import EmptyState from './components/EmptyState'
 import AdminPanel from './components/AdminPanel'
-import useLocalStorage from './hooks/useLocalStorage'
-import { defaultProducts, defaultSettings } from './data/seed'
+import { useProducts, useSettings } from './hooks/useFirestore'
+import { defaultSettings } from './data/seed'
 
 export default function App() {
-  const [products, setProducts] = useLocalStorage('wpshop_products', defaultProducts)
-  const [settings, setSettings] = useLocalStorage('wpshop_settings', defaultSettings)
+  const [products, addProduct, updateProduct, deleteProduct, productsLoading] = useProducts()
+  const [settings, setSettings, settingsLoading] = useSettings(defaultSettings)
 
   const [view, setView] = useState('shop')
   const [selectedProduct, setSelectedProduct] = useState(null)
@@ -49,12 +49,15 @@ export default function App() {
     })
   }, [products, search, selectedCategory])
 
-  const addProduct = (product) => {
-    setProducts((prev) => [product, ...prev])
-  }
-
-  const deleteProduct = (id) => {
-    setProducts((prev) => prev.filter((p) => p.id !== id))
+  if (productsLoading || settingsLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-green-500" />
+          <p className="mt-3 text-sm text-gray-500">Loading store...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -118,6 +121,7 @@ export default function App() {
         <AdminPanel
           products={products}
           onAdd={addProduct}
+          onEdit={updateProduct}
           onDelete={deleteProduct}
           settings={settings}
           onSettingsChange={setSettings}

@@ -1,15 +1,27 @@
 import { useState } from 'react'
-import { Plus, Trash2, Package, IndianRupee } from 'lucide-react'
+import { Plus, Trash2, Pencil, Package, IndianRupee, Check } from 'lucide-react'
 import ProductForm from './ProductForm'
 import AdminLogin from './AdminLogin'
 import { primaryImage, allImages } from '../utils/driveImage'
 
-export default function AdminPanel({ products, onAdd, onDelete, settings, onSettingsChange, isLoggedIn, onLogin, onLogout }) {
+export default function AdminPanel({ products, onAdd, onEdit, onDelete, settings, onSettingsChange, isLoggedIn, onLogin, onLogout }) {
   const [showForm, setShowForm] = useState(false)
+  const [editingProduct, setEditingProduct] = useState(null)
+  const [draft, setDraft] = useState(settings)
+  const [saved, setSaved] = useState(false)
 
-  const updateSetting = (key, value) => {
-    onSettingsChange({ ...settings, [key]: value })
+  const updateDraft = (key, value) => {
+    setDraft((prev) => ({ ...prev, [key]: value }))
+    setSaved(false)
   }
+
+  const handleSaveSettings = () => {
+    onSettingsChange(draft)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  const hasChanges = JSON.stringify(draft) !== JSON.stringify(settings)
 
   // Show login screen if not authenticated
   if (!isLoggedIn) {
@@ -34,8 +46,8 @@ export default function AdminPanel({ products, onAdd, onDelete, settings, onSett
           <div>
             <label className="block text-sm font-medium text-gray-700">Store name</label>
             <input
-              value={settings.storeName}
-              onChange={(e) => updateSetting('storeName', e.target.value)}
+              value={draft.storeName}
+              onChange={(e) => updateDraft('storeName', e.target.value)}
               className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-whatsapp focus:ring-2 focus:ring-whatsapp/20"
             />
           </div>
@@ -43,8 +55,8 @@ export default function AdminPanel({ products, onAdd, onDelete, settings, onSett
           <div>
             <label className="block text-sm font-medium text-gray-700">WhatsApp number</label>
             <input
-              value={settings.phoneNumber}
-              onChange={(e) => updateSetting('phoneNumber', e.target.value)}
+              value={draft.phoneNumber}
+              onChange={(e) => updateDraft('phoneNumber', e.target.value)}
               placeholder="e.g. 919876543210"
               className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-whatsapp focus:ring-2 focus:ring-whatsapp/20"
             />
@@ -63,6 +75,30 @@ export default function AdminPanel({ products, onAdd, onDelete, settings, onSett
         <p className="mt-3 text-xs text-gray-500">
           Enter your WhatsApp number with country code and no spaces, e.g. 919876543210 for India.
         </p>
+
+        <div className="mt-4 flex items-center gap-3">
+          <button
+            onClick={handleSaveSettings}
+            disabled={!hasChanges && !saved}
+            className={`rounded-xl px-5 py-2 text-sm font-semibold text-white transition ${
+              saved
+                ? 'bg-green-500'
+                : hasChanges
+                  ? 'bg-gray-900 hover:bg-gray-800'
+                  : 'cursor-not-allowed bg-gray-300'
+            }`}
+          >
+            {saved ? (
+              <span className="flex items-center gap-1.5">
+                <Check className="h-4 w-4" />
+                Saved!
+              </span>
+            ) : (
+              'Save settings'
+            )}
+          </button>
+          {hasChanges && <span className="text-xs text-amber-600">You have unsaved changes</span>}
+        </div>
       </section>
 
       {/* Products header */}
@@ -79,13 +115,19 @@ export default function AdminPanel({ products, onAdd, onDelete, settings, onSett
         )}
       </div>
 
-      {showForm && (
+      {(showForm || editingProduct) && (
         <ProductForm
+          product={editingProduct}
           onSave={(product) => {
-            onAdd(product)
-            setShowForm(false)
+            if (editingProduct) {
+              onEdit(product)
+              setEditingProduct(null)
+            } else {
+              onAdd(product)
+              setShowForm(false)
+            }
           }}
-          onCancel={() => setShowForm(false)}
+          onCancel={() => { setShowForm(false); setEditingProduct(null) }}
         />
       )}
 
@@ -125,13 +167,22 @@ export default function AdminPanel({ products, onAdd, onDelete, settings, onSett
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => onDelete(product.id)}
-                  className="rounded-lg p-2 text-red-600 transition hover:bg-red-50"
-                  aria-label="Delete product"
-                >
-                  <Trash2 className="h-5 w-5" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => { setEditingProduct(product); setShowForm(false) }}
+                    className="rounded-lg p-2 text-blue-600 transition hover:bg-blue-50"
+                    aria-label="Edit product"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => onDelete(product.id)}
+                    className="rounded-lg p-2 text-red-600 transition hover:bg-red-50"
+                    aria-label="Delete product"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
             )
           })}

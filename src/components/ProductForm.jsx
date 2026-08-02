@@ -4,14 +4,15 @@ import { toDirectImageUrl } from '../utils/driveImage'
 
 const EMPTY_IMAGES = ['', '', '', '']
 
-export default function ProductForm({ onSave, onCancel }) {
+export default function ProductForm({ onSave, onCancel, product }) {
+  const isEditing = Boolean(product)
   const [form, setForm] = useState({
-    name: '',
-    description: '',
-    price: '',
-    images: [...EMPTY_IMAGES],
-    category: '',
-    stock: '',
+    name: product?.name || '',
+    description: product?.description || '',
+    price: product?.price ?? '',
+    images: product?.images ? [...product.images, ...EMPTY_IMAGES].slice(0, 4) : [...EMPTY_IMAGES],
+    category: product?.category || '',
+    stock: product?.stock ?? '',
   })
 
   const handleChange = (field, value) => {
@@ -28,17 +29,17 @@ export default function ProductForm({ onSave, onCancel }) {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    const product = {
-      id: crypto.randomUUID(),
+    const updatedProduct = {
+      id: product?.id || crypto.randomUUID(),
       name: form.name.trim(),
       description: form.description.trim(),
       price: Number(form.price),
       images: form.images.map((img) => img.trim()),
       category: form.category.trim(),
       stock: form.stock ? Number(form.stock) : undefined,
-      createdAt: new Date().toISOString(),
+      createdAt: product?.createdAt || new Date().toISOString(),
     }
-    onSave(product)
+    onSave(updatedProduct)
   }
 
   const previewImages = form.images.map(toDirectImageUrl).filter(Boolean)
@@ -48,7 +49,7 @@ export default function ProductForm({ onSave, onCancel }) {
       onSubmit={handleSubmit}
       className="mb-6 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:mb-8 sm:p-6"
     >
-      <h3 className="mb-4 text-lg font-bold text-gray-900">Add new product</h3>
+      <h3 className="mb-4 text-lg font-bold text-gray-900">{isEditing ? 'Edit product' : 'Add new product'}</h3>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
@@ -152,7 +153,7 @@ export default function ProductForm({ onSave, onCancel }) {
           type="submit"
           className="rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"
         >
-          Save product
+          {isEditing ? 'Update product' : 'Save product'}
         </button>
         <button
           type="button"
