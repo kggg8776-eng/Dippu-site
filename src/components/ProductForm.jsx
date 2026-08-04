@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
-import { ImagePlus, Loader2, X } from 'lucide-react'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { ImagePlus, Loader2, X, AlertCircle } from 'lucide-react'
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage'
 import { storage } from '../firebase'
 import { toDirectImageUrl } from '../utils/driveImage'
 
@@ -20,7 +20,9 @@ export default function ProductForm({ onSave, onCancel, product }) {
     stock: product?.stock ?? '',
   })
   const [uploading, setUploading] = useState({})
+  const [progress, setProgress] = useState({})
   const [error, setError] = useState('')
+  const uploadTasks = useRef({})
 
   const validate = () => {
     if (!form.images[0] || !form.images[0].trim()) {
@@ -44,24 +46,75 @@ export default function ProductForm({ onSave, onCancel, product }) {
     if (index === 0 && value && error) setError('')
   }
 
-  const uploadFile = async (file, index) => {
+  const MAX_SIZE_MB = 5
+
+  const uploadFile = (file, index) => {
     if (!file || !file.type.startsWith('image/')) return
 
-    const productId = productIdRef.current
-    const path = `products/${productId}/${Date.now()}_${index}_${file.name}`
-    const storageRef = ref(storage, path)
+    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+      setError(`Image ${index + 1} is too large. Max size is ${MAX_SIZE_MB}MB.`)
+      return
+    }
+
+    // Cancel any previous upload for this slot
+    if (uploadTasks.current[index]) {
+      try { uploadTasks.current[index].cancel() } catch { /* ignore */ }
+    }
 
     setUploading((prev) => ({ ...prev, [index]: true }))
+    setProgress((prev) => ({ ...prev, [index]: 0 }))
+    setError('')
+
+    let task
     try {
-      await uploadBytes(storageRef, file)
-      const url = await getDownloadURL(storageRef)
-      handleImageChange(index, url)
+      const productId = productIdRef.current
+      const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_')
+      const path = `products/${productId}/${Date.now()}_${index}_${safeName}`
+      const storageRef = ref(storage, path)
+      task = uploadBytesResumable(storageRef, file)
+      uploadTasks.current[index] = task
     } catch (err) {
-      console.error('Upload failed:', err)
-      alert('Image upload failed. Please try again.')
-    } finally {
+      console.error('Storage init failed:', err)
+      setError('Could not start upload. Check that Firebase Storage is enabled and your bucket URL is correct.')
       setUploading((prev) => ({ ...prev, [index]: false }))
+      setProgress((prev) => ({ ...prev, [index]: 0 }))
+      return
     }
+
+    task.on(
+      'state_changed',
+      (snapshot) => {
+        const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
+        setProgress((prev) => ({ ...prev, [index]: pct }))
+      },
+      (err) => {
+        console.error('Upload failed:', err)
+        let message = 'Image upload failed. Please try again.'
+        if (err.code === 'storage/unauthorized') {
+          message = 'Upload denied: Firebase Storage rules do not allow writes. Please update your rules.'
+        } else if (err.code === 'storage/canceled') {
+          message = 'Upload was canceled.'
+        } else if (err.code === 'storage/unknown') {
+          message = 'Upload failed. Check that Firebase Storage is enabled and your bucket URL is correct.'
+        }
+        setError(message)
+        setUploading((prev) => ({ ...prev, [index]: false }))
+        setProgress((prev) => ({ ...prev, [index]: 0 }))
+      },
+      async () => {
+        try {
+          const url = await getDownloadURL(task.snapshot.ref)
+          handleImageChange(index, url)
+        } catch (err) {
+          console.error('Download URL failed:', err)
+          setError('Image uploaded but download URL could not be loaded.')
+        } finally {
+          setUploading((prev) => ({ ...prev, [index]: false }))
+          setProgress((prev) => ({ ...prev, [index]: 0 }))
+          delete uploadTasks.current[index]
+        }
+      }
+    )
   }
 
   const handleFileSelect = (index, e) => {
@@ -71,7 +124,13 @@ export default function ProductForm({ onSave, onCancel, product }) {
   }
 
   const removeImage = (index) => {
+    if (uploadTasks.current[index]) {
+      try { uploadTasks.current[index].cancel() } catch { /* ignore */ }
+      delete uploadTasks.current[index]
+    }
     handleImageChange(index, '')
+    setUploading((prev) => ({ ...prev, [index]: false }))
+    setProgress((prev) => ({ ...prev, [index]: 0 }))
   }
 
   const handleSubmit = (e) => {
@@ -200,8 +259,9 @@ export default function ProductForm({ onSave, onCancel, product }) {
                 </label>
 
                 {isUploading && (
-                  <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-xl bg-black/60">
                     <Loader2 className="h-6 w-6 animate-spin text-white" />
+                    <span className="text-[10px] font-medium text-white">{progress[idx] ?? 0}%</span>
                   </div>
                 )}
 
