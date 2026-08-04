@@ -1,5 +1,7 @@
-import { useState } from 'react'
-import { ImagePlus } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { ImagePlus, Loader2, X } from 'lucide-react'
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { storage } from '../firebase'
 import { toDirectImageUrl } from '../utils/driveImage'
 
 const EMPTY_IMAGES = ['', '', '', '']
@@ -8,6 +10,7 @@ const CATEGORIES = ['Women', 'Men', 'Child', 'Jewellery', 'Festival']
 
 export default function ProductForm({ onSave, onCancel, product }) {
   const isEditing = Boolean(product)
+  const productIdRef = useRef(product?.id || crypto.randomUUID())
   const [form, setForm] = useState({
     name: product?.name || '',
     description: product?.description || '',
@@ -16,6 +19,7 @@ export default function ProductForm({ onSave, onCancel, product }) {
     category: product?.category || '',
     stock: product?.stock ?? '',
   })
+  const [uploading, setUploading] = useState({})
 
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -29,22 +33,50 @@ export default function ProductForm({ onSave, onCancel, product }) {
     })
   }
 
+  const uploadFile = async (file, index) => {
+    if (!file || !file.type.startsWith('image/')) return
+
+    const productId = productIdRef.current
+    const path = `products/${productId}/${Date.now()}_${index}_${file.name}`
+    const storageRef = ref(storage, path)
+
+    setUploading((prev) => ({ ...prev, [index]: true }))
+    try {
+      await uploadBytes(storageRef, file)
+      const url = await getDownloadURL(storageRef)
+      handleImageChange(index, url)
+    } catch (err) {
+      console.error('Upload failed:', err)
+      alert('Image upload failed. Please try again.')
+    } finally {
+      setUploading((prev) => ({ ...prev, [index]: false }))
+    }
+  }
+
+  const handleFileSelect = (index, e) => {
+    const file = e.target.files?.[0]
+    if (file) uploadFile(file, index)
+    e.target.value = ''
+  }
+
+  const removeImage = (index) => {
+    handleImageChange(index, '')
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault()
     const updatedProduct = {
-      id: product?.id || crypto.randomUUID(),
+      id: productIdRef.current,
       name: form.name.trim(),
       description: form.description.trim(),
       price: Number(form.price),
-      images: form.images.map((img) => img.trim()),
+      images: form.images.map((img) => img.trim()).filter(Boolean),
       category: form.category.trim(),
       stock: form.stock ? Number(form.stock) : undefined,
       createdAt: product?.createdAt || new Date().toISOString(),
     }
     onSave(updatedProduct)
   }
-
-  const previewImages = form.images.map(toDirectImageUrl).filter(Boolean)
 
   return (
     <form
@@ -114,46 +146,64 @@ export default function ProductForm({ onSave, onCancel, product }) {
         </div>
       </div>
 
-      {/* 4 Image URL fields */}
+      {/* Image upload slots */}
       <div className="mt-6">
         <div className="mb-2 flex items-center gap-2">
           <ImagePlus className="h-4 w-4 text-gray-500" />
           <span className="text-sm font-medium text-gray-700">Product images (up to 4)</span>
         </div>
         <p className="mb-3 text-xs text-gray-400">
-          Paste a direct URL, Google Drive share link, or Mega drive link. Google Drive links are auto-converted.
+          Tap a box to upload from your gallery. First image will be the product thumbnail.
         </p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {form.images.map((img, idx) => (
-            <div key={idx}>
-              <label className="block text-xs font-medium text-gray-500">Image {idx + 1}</label>
-              <input
-                value={img}
-                onChange={(e) => handleImageChange(idx, e.target.value)}
-                placeholder="https://drive.google.com/file/d/... or direct URL"
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-whatsapp focus:ring-2 focus:ring-whatsapp/20"
-              />
-            </div>
-          ))}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {form.images.map((img, idx) => {
+            const preview = toDirectImageUrl(img)
+            const isUploading = uploading[idx]
+            return (
+              <div key={idx} className="relative aspect-square">
+                <label className="flex h-full w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 transition hover:border-whatsapp hover:bg-gray-100">
+                  {preview ? (
+                    <img
+                      src={preview}
+                      alt={`Preview ${idx + 1}`}
+                      className="absolute inset-0 h-full w-full object-cover"
+                      onError={(e) => { e.target.style.display = 'none' }}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center p-2 text-center">
+                      <ImagePlus className="mb-1 h-6 w-6 text-gray-400" />
+                      <span className="text-[10px] text-gray-500">Image {idx + 1}</span>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleFileSelect(idx, e)}
+                    disabled={isUploading}
+                  />
+                </label>
+
+                {isUploading && (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50">
+                    <Loader2 className="h-6 w-6 animate-spin text-white" />
+                  </div>
+                )}
+
+                {img && !isUploading && (
+                  <button
+                    type="button"
+                    onClick={() => removeImage(idx)}
+                    className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
-
-      {previewImages.length > 0 && (
-        <div className="mt-4">
-          <p className="mb-2 text-xs font-medium text-gray-500">Image preview</p>
-          <div className="flex gap-3 overflow-x-auto">
-            {previewImages.map((src, idx) => (
-              <img
-                key={idx}
-                src={src}
-                alt={`Preview ${idx + 1}`}
-                className="h-24 w-24 shrink-0 rounded-lg border border-gray-100 object-cover"
-                onError={(e) => { e.target.style.display = 'none' }}
-              />
-            ))}
-          </div>
-        </div>
-      )}
 
       <div className="mt-6 flex gap-3">
         <button
