@@ -8,6 +8,7 @@ import OrderModal from './components/OrderModal'
 import ProductModal from './components/HoverPreview'
 import EmptyState from './components/EmptyState'
 import AdminPanel from './components/AdminPanel'
+import Footer from './components/Footer'
 import { useProducts, useSettings } from './hooks/useFirestore'
 import { defaultSettings } from './data/seed'
 
@@ -172,6 +173,8 @@ export default function App() {
           onClose={() => setSelectedProduct(null)}
         />
       )}
+
+      {view === 'shop' && <Footer settings={settings} />}
     </div>
   )
 }

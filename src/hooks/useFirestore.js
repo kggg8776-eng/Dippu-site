@@ -53,7 +53,9 @@ export function useSettings(defaultSettings) {
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'settings', 'store'), (snap) => {
       if (snap.exists()) {
-        setSettings(snap.data())
+        setSettings({ ...defaultSettings, ...snap.data() })
+      } else {
+        setSettings(defaultSettings)
       }
       setLoading(false)
     })

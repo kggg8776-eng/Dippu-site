@@ -3,4 +3,12 @@ export const defaultSettings = {
   phoneNumber: '',
   currency: '₹',
   welcomeMessage: 'Thanks for your order!',
+  footerTagline: 'Your fashion destination',
+  email: '',
+  socialLinks: {
+    instagram: '',
+    facebook: '',
+    youtube: '',
+    twitter: '',
+  },
 }

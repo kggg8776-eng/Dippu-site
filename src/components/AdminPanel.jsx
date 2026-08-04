@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Trash2, Pencil, Package, IndianRupee, Check } from 'lucide-react'
+import { Plus, Trash2, Pencil, Package, IndianRupee, Check, Mail, Globe } from 'lucide-react'
 import ProductForm from './ProductForm'
 import AdminLogin from './AdminLogin'
 import { primaryImage, allImages } from '../utils/driveImage'
@@ -75,6 +75,50 @@ export default function AdminPanel({ products, onAdd, onEdit, onDelete, settings
         <p className="mt-3 text-xs text-gray-500">
           Enter your WhatsApp number with country code and no spaces, e.g. 919876543210 for India.
         </p>
+
+        <div className="mt-6 border-t border-gray-100 pt-5">
+          <h3 className="mb-3 text-sm font-bold text-gray-900">Footer & contact</h3>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Footer tagline</label>
+              <input
+                value={draft.footerTagline || ''}
+                onChange={(e) => updateDraft('footerTagline', e.target.value)}
+                placeholder="Your fashion destination"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-whatsapp focus:ring-2 focus:ring-whatsapp/20"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Email address</label>
+              <div className="mt-1 flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 focus-within:border-whatsapp focus-within:ring-2 focus-within:ring-whatsapp/20">
+                <Mail className="h-4 w-4 text-gray-400" />
+                <input
+                  type="email"
+                  value={draft.email || ''}
+                  onChange={(e) => updateDraft('email', e.target.value)}
+                  placeholder="hello@example.com"
+                  className="w-full bg-transparent text-sm outline-none"
+                />
+              </div>
+            </div>
+
+            {['instagram', 'facebook', 'youtube', 'twitter'].map((platform) => (
+              <div key={platform}>
+                <label className="block text-sm font-medium text-gray-700 capitalize">{platform}</label>
+                <div className="mt-1 flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 focus-within:border-whatsapp focus-within:ring-2 focus-within:ring-whatsapp/20">
+                  <Globe className="h-4 w-4 text-gray-400" />
+                  <input
+                    value={draft.socialLinks?.[platform] || ''}
+                    onChange={(e) => updateDraft('socialLinks', { ...draft.socialLinks, [platform]: e.target.value })}
+                    placeholder={`${platform}.com/...`}
+                    className="w-full bg-transparent text-sm outline-none"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
         <div className="mt-4 flex items-center gap-3">
           <button
