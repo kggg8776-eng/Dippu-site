@@ -20,6 +20,16 @@ export default function ProductForm({ onSave, onCancel, product }) {
     stock: product?.stock ?? '',
   })
   const [uploading, setUploading] = useState({})
+  const [error, setError] = useState('')
+
+  const validate = () => {
+    if (!form.images[0] || !form.images[0].trim()) {
+      setError('Please upload at least one product photo.')
+      return false
+    }
+    setError('')
+    return true
+  }
 
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -31,6 +41,7 @@ export default function ProductForm({ onSave, onCancel, product }) {
       images[index] = value
       return { ...prev, images }
     })
+    if (index === 0 && value && error) setError('')
   }
 
   const uploadFile = async (file, index) => {
@@ -65,6 +76,7 @@ export default function ProductForm({ onSave, onCancel, product }) {
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    if (!validate()) return
     const updatedProduct = {
       id: productIdRef.current,
       name: form.name.trim(),
@@ -150,11 +162,14 @@ export default function ProductForm({ onSave, onCancel, product }) {
       <div className="mt-6">
         <div className="mb-2 flex items-center gap-2">
           <ImagePlus className="h-4 w-4 text-gray-500" />
-          <span className="text-sm font-medium text-gray-700">Product images (up to 4)</span>
+          <span className="text-sm font-medium text-gray-700">Product images (up to 4) *</span>
         </div>
         <p className="mb-3 text-xs text-gray-400">
-          Tap a box to upload from your gallery. First image will be the product thumbnail.
+          First photo is required and will be the product thumbnail. Tap a box to upload from your gallery.
         </p>
+        {error && (
+          <p className="mb-3 text-xs font-medium text-red-600">{error}</p>
+        )}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {form.images.map((img, idx) => {
             const preview = toDirectImageUrl(img)
